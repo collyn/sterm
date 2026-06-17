@@ -47,3 +47,11 @@ workarounds = [
 #   - warp-completion-metadata
 #   - warp-workflows
 #   - warp-workflows-types
+
+[self_cell.clarify]
+license = "Apache-2.0"
+
+[[self_cell.clarify.files]]
+path = "LICENSE-APACHE"
+checksum = "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+
