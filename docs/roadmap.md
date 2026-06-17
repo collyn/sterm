@@ -36,7 +36,3 @@ Zap's agent stack will be built as a standalone open-source service, independent
 - End-to-end open source: harness, sandbox runtime, web UI and integrations — all self-hostable.
 
 > Roadmap items are exploratory and may shift as the harness lands and real usage feedback arrives.
-
----
-
-[简体中文](./roadmap.zh-CN.md) · [日本語](./roadmap.ja.md)

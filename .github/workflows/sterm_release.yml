@@ -1,10 +1,10 @@
-# Zap 发布流水线 — 在 openWarp 分支上 push tag (v*) 即触发
+# STerm 发布流水线 — 在 openWarp 分支上 push tag (v*) 即触发
 #
 # 与上游 create_release.yml 的差异:
 # - 仅 macOS arm64 + macOS Intel + Windows x64 + Linux x86_64,
 #   Web/CLI/Universal/Win-arm64 全砍
 #   (macOS 双架构分别产单架构 DMG 与 CLI tarball;Linux 产 AppImage/deb/rpm
-#    以及尽力而为的 Arch 包,不发布上游 Zap 仓库源或签名 key)
+#    以及尽力而为的 Arch 包,不发布上游 STerm 仓库源或签名 key)
 # - 单 channel: preview(由 release_configurations.json 提供配置)
 # - 不签名:不传 --read-passwords-from-env(macOS) / 不设 SIGN_TOOL_CMD(Windows)
 # - 不上传 GCS / 第三方 crash 平台 / Slack / changelog,不调 channel-versions repository_dispatch
@@ -15,7 +15,7 @@
 #                    → publish_release (全部 build 成功后下载 artifact 并创建 Release)
 # 任意 build job 失败 → publish_release 因 needs 跳过 → 不会留下没有安装包的 Release。
 
-name: Zap Release
+name: STerm Release
 
 # PR 验证由 .github/workflows/pr-check.yml 负责(Linux cargo check)。
 # 本 workflow 只在 push tag / 手动 dispatch 时跑全量三平台打包,避免 PR 跑 ~3h 浪费。
@@ -35,7 +35,7 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   CONFIG_FILE: ".github/workflows/release_configurations.json"
-  # Zap fork 用 oss channel(对应 app/src/bin/oss.rs 内联 ChannelConfig,
+  # STerm fork 用 oss channel(对应 app/src/bin/sterm.rs 内联 ChannelConfig,
   # 不依赖 warp-channel-config 私有二进制),preview 等内部 channel 走
   # channel_config::load_config!() 宏 → build.rs 调 warp-channel-config 失败 →
   # *_config.json 不生成 → include_str! 编译失败。
@@ -195,7 +195,7 @@ jobs:
         run: brew install create-dmg
 
       # 用 --selfsign 走 ad-hoc 签名(无 Apple Developer cert 时 fallback 到 `-`):
-      # 1. 让 .app 拥有 cdhash → UNUserNotificationCenter 才肯把 Zap 注册到
+      # 1. 让 .app 拥有 cdhash → UNUserNotificationCenter 才肯把 STerm 注册到
       #    System Settings → Notifications(否则桌面通知静默失效,见 issue #40)。
       # 2. ad-hoc + Hardened Runtime + Debug-Entitlements.plist(disable-library-validation
       #    + get-task-allow)是合法组合,可在 macos-26 runner 上无凭证完成。
@@ -215,7 +215,7 @@ jobs:
       - name: Upload DMG artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: zap-macos-${{ matrix.dmg_name_suffix }}
+          name: sterm-macos-${{ matrix.dmg_name_suffix }}
           path: ${{ steps.bundle_app.outputs.dmg_path }}
           if-no-files-found: error
           retention-days: 7
@@ -230,17 +230,17 @@ jobs:
 
       - name: Package CLI tarball
         run: |
-          cp "${{ steps.bundle_cli.outputs.binary_path }}" zap-oss
-          tar czf zap-macos-${{ matrix.arch }}.tar.gz \
-            zap-oss \
+          cp "${{ steps.bundle_cli.outputs.binary_path }}" sterm-oss
+          tar czf sterm-macos-${{ matrix.arch }}.tar.gz \
+            sterm-oss \
             -C "$(dirname "${{ steps.bundle_cli.outputs.bundled_resources_dir }}")" resources
         shell: bash
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: zap-cli-macos-${{ matrix.arch }}
-          path: zap-macos-${{ matrix.arch }}.tar.gz
+          name: sterm-cli-macos-${{ matrix.arch }}
+          path: sterm-macos-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
           retention-days: 7
 
@@ -278,7 +278,7 @@ jobs:
       - name: Upload installer artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: zap-windows-x64
+          name: sterm-windows-x64
           path: ${{ steps.bundle_app.outputs.installer_path }}
           if-no-files-found: error
           retention-days: 7
@@ -337,7 +337,7 @@ jobs:
           # 让 linuxdeploy/appimagetool 不依赖 FUSE 内核模块,跨 runner 版本都稳。
           APPIMAGE_EXTRACT_AND_RUN: 1
 
-      # RPM 包:复用上一步 release-lto 已经 strip 过的 `target/release-lto/zap-oss`,
+      # RPM 包:复用上一步 release-lto 已经 strip 过的 `target/release-lto/sterm`,
       # 不重新 `cargo build`。`--skip-build` 让 `script/bundle` 跳过编译与 strip,
       # 直接进入 staging(`bundle_install` → 复制二进制 + resources)+ rpmbuild。
       # 与 deb 同一台 ubuntu-22.04 runner 上跑,共享 host glibc 链接的产物;
@@ -350,7 +350,7 @@ jobs:
         env:
           GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
 
-      # Arch 包:复用上一步 release-lto 已经 strip 过的 `target/release-lto/zap-oss`,
+      # Arch 包:复用上一步 release-lto 已经 strip 过的 `target/release-lto/sterm`,
       # 不重新 `cargo build` 主二进制 —— `--skip-build` 让 `script/bundle` 跳过编译与 strip,
       # 直接进入 staging(`bundle_install` → 复制二进制 + resources)+ makepkg。
       #
@@ -421,7 +421,7 @@ jobs:
       - name: Upload package artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: zap-linux-x86_64
+          name: sterm-linux-x86_64
           # packages_dir 是 target/release-lto/bundle/linux,AppImage/deb/Arch 都落在这里
           path: ${{ steps.bundle_app.outputs.packages_dir }}
           if-no-files-found: error
@@ -476,17 +476,17 @@ jobs:
 
       - name: Package CLI tarball
         run: |
-          cp "${{ steps.bundle_cli.outputs.executable_path }}" zap-oss
-          tar czf zap-linux-x86_64.tar.gz \
-            zap-oss \
+          cp "${{ steps.bundle_cli.outputs.executable_path }}" sterm-oss
+          tar czf sterm-linux-x86_64.tar.gz \
+            sterm-oss \
             -C "$(dirname "${{ steps.bundle_cli.outputs.bundled_resources_dir }}")" resources
         shell: bash
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: zap-cli-linux-x86_64
-          path: zap-linux-x86_64.tar.gz
+          name: sterm-cli-linux-x86_64
+          path: sterm-linux-x86_64.tar.gz
           if-no-files-found: error
           retention-days: 7
 

@@ -4,9 +4,7 @@
 
 # STerm
 
-[简体中文](./README.zh-CN.md) · [日本語](./README.ja.md)
-
-<sub><i>Currently based on <a href="https://github.com/warpdotdev/warp">Warp</a>; evolving independently going forward.</i></sub>
+<sub><i>Forked from <a href="https://github.com/zerx-lab/zap">Zap</a> (which is based on <a href="https://github.com/warpdotdev/warp">Warp</a>); evolving independently going forward.</i></sub>
 
 </div>
 
@@ -36,4 +34,5 @@ See [docs/roadmap.md](docs/roadmap.md).
 
 ## Acknowledgements
 
-- [Warp](https://github.com/warpdotdev/warp) — the upstream terminal STerm is built on.
+- [Zap](https://github.com/zerx-lab/zap) — the project STerm is forked from.
+- [Warp](https://github.com/warpdotdev/warp) — the upstream terminal Zap is built on.

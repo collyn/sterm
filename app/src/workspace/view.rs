@@ -17270,8 +17270,111 @@ impl Workspace {
 
     // 去中心化分支:`render_reauth_banner_element` 已删除。
 
-    fn render_autoupdate_banner_element(&self, _app: &AppContext) -> Option<WorkspaceBannerFields> {
-        None
+    fn render_autoupdate_banner_element(&self, app: &AppContext) -> Option<WorkspaceBannerFields> {
+        if FeatureFlag::Autoupdate.is_enabled() {
+            match autoupdate::get_update_state(app) {
+                AutoupdateStage::UnableToUpdateToNewVersion { new_version }
+                    if !self.autoupdate_unable_to_update_banner_dismissed =>
+                {
+                    let description =
+                        if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
+                            crate::t!("workspace-version-deprecation-without-permissions-banner")
+                        } else {
+                            crate::t!("workspace-new-version-unable-to-update-banner")
+                        };
+
+                    Some(WorkspaceBannerFields {
+                        banner_type: WorkspaceBanner::UnableToUpdateToNewVersion,
+                        severity: BannerSeverity::Error,
+                        heading: None,
+                        description,
+                        secondary_button: None,
+                        button: Some(WorkspaceBannerButtonDetails {
+                            text: crate::t!("workspace-update-warp-manually"),
+                            action: WorkspaceAction::DownloadNewVersion,
+                            variant: BannerButtonVariant::Outlined,
+                            icon: None,
+                            more_info_button_action: Some(WorkspaceAction::AutoupdateFailureLink),
+                        }),
+                    })
+                }
+                AutoupdateStage::UnableToLaunchNewVersion { new_version }
+                    if !self.autoupdate_unable_to_launch_new_version =>
+                {
+                    let description =
+                        if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
+                            crate::t!("workspace-version-deprecation-without-permissions-banner")
+                        } else {
+                            crate::t!("workspace-unable-to-launch-new-installed-version")
+                        };
+
+                    Some(WorkspaceBannerFields {
+                        banner_type: WorkspaceBanner::UnableToLaunchNewVersion,
+                        severity: BannerSeverity::Error,
+                        heading: None,
+                        description,
+                        secondary_button: None,
+                        button: Some(WorkspaceBannerButtonDetails {
+                            text: crate::t!("workspace-update-warp-manually"),
+                            action: WorkspaceAction::DownloadNewVersion,
+                            variant: BannerButtonVariant::Outlined,
+                            icon: None,
+                            more_info_button_action: Some(WorkspaceAction::AutoupdateFailureLink),
+                        }),
+                    })
+                }
+                AutoupdateStage::UpdateReady { new_version, .. }
+                | AutoupdateStage::UpdatedPendingRestart { new_version } => {
+                    if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
+                        Some(WorkspaceBannerFields {
+                            banner_type: WorkspaceBanner::VersionDeprecated,
+                            severity: BannerSeverity::Error,
+                            heading: None,
+                            description: crate::t!("workspace-version-deprecation-banner"),
+                            secondary_button: None,
+                            button: Some(WorkspaceBannerButtonDetails {
+                                text: crate::t!("workspace-update-now"),
+                                action: WorkspaceAction::ApplyUpdate,
+                                variant: BannerButtonVariant::Outlined,
+                                icon: None,
+                                more_info_button_action: None,
+                            }),
+                        })
+                    } else if let Some(update_by) = new_version.update_by {
+                        self.server_time.as_ref().and_then(|server_time| {
+                            (server_time.current_time() > update_by).then(|| {
+                                WorkspaceBannerFields {
+                                    banner_type: WorkspaceBanner::VersionDeprecated,
+                                    severity: BannerSeverity::Warning,
+                                    heading: None,
+                                    description: crate::t!(
+                                        "workspace-app-out-of-date-needs-update"
+                                    ),
+                                    secondary_button: None,
+                                    button: Some(WorkspaceBannerButtonDetails {
+                                        text: crate::t!("workspace-restart-app-and-update-now"),
+                                        action: WorkspaceAction::ApplyUpdate,
+                                        variant: BannerButtonVariant::Outlined,
+                                        icon: None,
+                                        more_info_button_action: None,
+                                    }),
+                                }
+                            })
+                        })
+                    } else {
+                        None
+                    }
+                }
+                AutoupdateStage::NoUpdateAvailable
+                | AutoupdateStage::CheckingForUpdate
+                | AutoupdateStage::DownloadingUpdate
+                | AutoupdateStage::Updating { .. }
+                | AutoupdateStage::UnableToUpdateToNewVersion { .. }
+                | AutoupdateStage::UnableToLaunchNewVersion { .. } => None,
+            }
+        } else {
+            None
+        }
     }
 
     fn render_workspace_banner(
