@@ -1,0 +1,25 @@
+[Desktop Entry]
+# The version of the desktop entry spec this conforms to.
+Version=1.0
+
+Type=Application
+
+Name=STerm
+GenericName=TerminalEmulator
+
+# `sterm` 在 deb/rpm 包里是 /opt/sterm/sterm 的 symlink
+# 直接指向 sterm 二进制。
+Exec=sterm %U
+StartupWMClass=dev.sterm.STerm
+
+Keywords=shell;prompt;command;commandline;cmd;
+
+Icon=dev.sterm.STerm
+
+Categories=System;TerminalEmulator;
+
+# Don't run this application within a terminal.
+Terminal=false
+
+# Register ourselves as the handler for sterm:// URLs.
+MimeType=x-scheme-handler/sterm;
