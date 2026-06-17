@@ -25,6 +25,7 @@ use crate::{
     CodeBlockText, FormattedImage, FormattedIndentTextInline, FormattedTable, FormattedTaskList,
     FormattedText, FormattedTextFragment, FormattedTextHeader, FormattedTextInline,
     FormattedTextLine, Hyperlink, OrderedFormattedIndentTextInline, TableAlignment,
+    html_parser::parse_html,
 };
 use crate::{CustomWeight, FormattedTextStyles};
 
@@ -181,6 +182,7 @@ fn parse_markdown_internal<'a, E: ContextError<&'a str> + ParseError<&'a str>>(
                 }
                 map(parse_table, FormattedTextLine::Table)(i)
             },
+            parse_html_block,
             parse_paragraph,
         )),
     );
@@ -219,6 +221,153 @@ fn parse_markdown_internal<'a, E: ContextError<&'a str> + ParseError<&'a str>>(
     }
 
     Ok((remaining, lines))
+}
+
+fn parse_html_block<'a, E: ContextError<&'a str> + ParseError<&'a str>>(
+    markdown: &'a str,
+) -> IResult<&'a str, FormattedTextLine, E> {
+    let Some(tag_name) = html_block_start_tag(markdown) else {
+        return Err(nom::Err::Error(make_error(markdown, ErrorKind::Tag)));
+    };
+
+    let closing_tag = format!("</{tag_name}");
+    let mut consumed = 0usize;
+
+    loop {
+        let rest = &markdown[consumed..];
+        if rest.is_empty() {
+            break;
+        }
+
+        let line_len = rest.find('\n').map_or(rest.len(), |idx| idx + 1);
+        let line = &rest[..line_len];
+        if consumed > 0 && line.trim().is_empty() {
+            break;
+        }
+
+        consumed += line_len;
+
+        let block_so_far = markdown[..consumed].to_ascii_lowercase();
+        if html_void_tag(&tag_name) || block_so_far.contains(&closing_tag) {
+            break;
+        }
+    }
+
+    if consumed == 0 {
+        return Err(nom::Err::Error(make_error(markdown, ErrorKind::Tag)));
+    }
+
+    let parsed = parse_html(&markdown[..consumed])
+        .map_err(|_| nom::Err::Error(make_error(markdown, ErrorKind::Tag)))?;
+    let Some(mut line) = parsed
+        .lines
+        .into_iter()
+        .find(|line| !matches!(line, FormattedTextLine::Line(fragments) if fragments.is_empty()))
+    else {
+        return Err(nom::Err::Error(make_error(markdown, ErrorKind::Tag)));
+    };
+
+    trim_html_block_leading_whitespace(&mut line);
+    Ok((&markdown[consumed..], line))
+}
+
+fn trim_html_block_leading_whitespace(line: &mut FormattedTextLine) {
+    match line {
+        FormattedTextLine::Line(fragments)
+        | FormattedTextLine::Heading(FormattedTextHeader {
+            text: fragments, ..
+        }) => {
+            trim_inline_leading_whitespace(fragments);
+        }
+        FormattedTextLine::OrderedList(list) => {
+            trim_inline_leading_whitespace(&mut list.indented_text.text);
+        }
+        FormattedTextLine::UnorderedList(list) => {
+            trim_inline_leading_whitespace(&mut list.text);
+        }
+        FormattedTextLine::TaskList(list) => {
+            trim_inline_leading_whitespace(&mut list.text);
+        }
+        FormattedTextLine::CodeBlock(_)
+        | FormattedTextLine::LineBreak
+        | FormattedTextLine::HorizontalRule
+        | FormattedTextLine::Embedded(_)
+        | FormattedTextLine::Image(_)
+        | FormattedTextLine::Table(_) => {}
+    }
+}
+
+fn trim_inline_leading_whitespace(fragments: &mut Vec<FormattedTextFragment>) {
+    while fragments
+        .first()
+        .is_some_and(|fragment| fragment.text.trim().is_empty())
+    {
+        fragments.remove(0);
+    }
+
+    if let Some(fragment) = fragments.first_mut() {
+        let trimmed = fragment.text.trim_start();
+        if trimmed.len() != fragment.text.len() {
+            fragment.text = trimmed.to_string();
+        }
+    }
+}
+
+fn html_block_start_tag(input: &str) -> Option<String> {
+    let trimmed = input.trim_start_matches(' ');
+    let rest = trimmed.strip_prefix('<')?;
+    if rest.starts_with('/') {
+        return None;
+    }
+
+    let tag_len = rest
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric())
+        .map(char::len_utf8)
+        .sum::<usize>();
+    if tag_len == 0 {
+        return None;
+    }
+
+    let tag_name = rest[..tag_len].to_ascii_lowercase();
+    let after_tag = rest[tag_len..].chars().next()?;
+    if !(after_tag.is_whitespace() || after_tag == '>' || after_tag == '/') {
+        return None;
+    }
+
+    if html_block_tag_supported(&tag_name) {
+        Some(tag_name)
+    } else {
+        None
+    }
+}
+
+fn html_block_tag_supported(tag_name: &str) -> bool {
+    matches!(
+        tag_name,
+        "a" | "blockquote"
+            | "center"
+            | "details"
+            | "div"
+            | "h1"
+            | "h2"
+            | "h3"
+            | "h4"
+            | "h5"
+            | "h6"
+            | "img"
+            | "li"
+            | "ol"
+            | "p"
+            | "pre"
+            | "strong"
+            | "summary"
+            | "ul"
+    )
+}
+
+fn html_void_tag(tag_name: &str) -> bool {
+    matches!(tag_name, "br" | "hr" | "img")
 }
 
 /// Parse a single paragraph of Markdown text.

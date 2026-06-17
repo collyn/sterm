@@ -1,11 +1,11 @@
-# git-cliff 配置 — 用于在 Zap Release 发布时自动生成「自上个 tag 以来的变更」。
+# git-cliff configuration - used to automatically generate changelogs since the last tag for Eterm releases.
 #
-# 设计原则:
-# - 主分组按 conventional commit type(feat/fix/refactor/docs/test/build/ci/ui/perf/chore)。
-# - scope 以加粗前缀 `**(scope)**` 形式保留,便于按子系统快速扫读(ai/ssh/i18n/linux/...)。
-# - Merge commit、纯 chore(release)、Revert 等噪声直接 skip。
-# - 非 conventional commit 落到「其他」分组兜底,不丢信息但也不污染主分组。
-# - 输出纯片段(不带 H1 标题与日期块),由 workflow 拼到 release_body 顶部说明之后。
+# Design principles:
+# - Group by conventional commit types (feat/fix/refactor/docs/test/build/ci/ui/perf/chore).
+# - Retain scope as a bold prefix `**(scope)**` for quick scanning (ai/ssh/i18n/linux/...).
+# - Skip noisy commits like merges, pure release chores, reverts, etc.
+# - Unconventional commits fall back to the "Others" group to avoid losing information.
+# - Output a clean fragment (no H1 header or date block), which the workflow prepends below the release body description.
 
 [changelog]
 # 顶部不输出 `# Changelog` 大标题;由 publish_release 步骤负责整体排版。
@@ -72,17 +72,17 @@ commit_parsers = [
     { message = "^chore: release", skip = true },
     { message = "^v[0-9]+\\.", skip = true },
 
-    # conventional commit 主分组(中文标题,顺序就是渲染顺序)
-    { message = "^feat", group = "✨ 新功能" },
-    { message = "^fix", group = "🐛 修复" },
-    { message = "^perf", group = "⚡ 性能" },
-    { message = "^refactor", group = "♻️ 重构" },
-    { message = "^ui", group = "🎨 界面" },
-    { message = "^style", group = "🎨 界面" },
-    { message = "^test", group = "🧪 测试" },
-    { message = "^docs", group = "📝 文档" },
-    { message = "^(build|ci|chore)", group = "🛠 基建与杂项" },
+    # conventional commit main groups (English titles)
+    { message = "^feat", group = "✨ New Features" },
+    { message = "^fix", group = "🐛 Bug Fixes" },
+    { message = "^perf", group = "⚡ Performance" },
+    { message = "^refactor", group = "♻️ Refactoring" },
+    { message = "^ui", group = "🎨 Styling" },
+    { message = "^style", group = "🎨 Styling" },
+    { message = "^test", group = "🧪 Testing" },
+    { message = "^docs", group = "📝 Documentation" },
+    { message = "^(build|ci|chore)", group = "🛠 Build System & Chores" },
 
-    # 兜底:其余形态的 commit 也保留下来,放到「其他」分组,避免漏掉非规范提交。
-    { message = ".*", group = "📦 其他" },
+    # Fallback: keep other commit types under "Others" group
+    { message = ".*", group = "📦 Others" },
 ]

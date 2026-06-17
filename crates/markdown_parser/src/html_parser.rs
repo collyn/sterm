@@ -12,7 +12,7 @@ use html5ever::{
 use markup5ever_rcdom::{Node, NodeData, RcDom};
 
 use crate::{
-    CodeBlockText, FormattedIndentTextInline, FormattedTaskList, FormattedText,
+    CodeBlockText, FormattedImage, FormattedIndentTextInline, FormattedTaskList, FormattedText,
     FormattedTextFragment, FormattedTextHeader, FormattedTextInline, FormattedTextLine,
     FormattedTextStyles, Hyperlink, OrderedFormattedIndentTextInline,
     markdown_parser::RUNNABLE_BLOCK_MARKDOWN_LANG, weight::CustomWeight,
@@ -121,6 +121,39 @@ fn includes_attribute(attributes: &[Attribute], name: &str) -> bool {
 
 fn type_matches(attributes: &[Attribute], value: &str) -> bool {
     get_attribute(attributes, "type") == Some(value)
+}
+
+fn parse_image_node(node: &Rc<Node>) -> Option<FormattedImage> {
+    let NodeData::Element { name, attrs, .. } = &node.data else {
+        return None;
+    };
+    if name.local.as_ref() != "img" {
+        return None;
+    }
+
+    let attrs = attrs.borrow();
+    Some(FormattedImage {
+        alt_text: get_attribute(&attrs, "alt").unwrap_or_default().to_string(),
+        source: get_attribute(&attrs, "src").unwrap_or_default().to_string(),
+        title: get_attribute(&attrs, "title").map(ToString::to_string),
+    })
+}
+
+fn parse_standalone_image(nodes: &[Rc<Node>]) -> Option<FormattedImage> {
+    let mut image = None;
+    for node in nodes {
+        match &node.data {
+            NodeData::Text { contents } if contents.borrow().trim().is_empty() => {}
+            NodeData::Element { .. } => {
+                let parsed = parse_image_node(node)?;
+                if image.replace(parsed).is_some() {
+                    return None;
+                }
+            }
+            _ => return None,
+        }
+    }
+    image
 }
 
 // Top-level function to parse a HTML string into a FormattedText document.
@@ -265,6 +298,9 @@ pub fn parse_html(html: &str) -> Result<FormattedText> {
                 decorated_styling.update_with_attributes(&attrs.borrow());
 
                 result.push_back(match node_name.as_str() {
+                    "img" => FormattedTextLine::Image(
+                        parse_image_node(&node).expect("img node should parse as image"),
+                    ),
                     // If it's a code block, process its children node as plain text.
                     "pre" => {
                         if let Some(val) = get_attribute(&attrs.borrow(), WARP_EMBED_ATTRIBUTE_NAME)
@@ -371,6 +407,12 @@ fn parse_pending_inline_nodes(
     nodes: &[Rc<Node>],
     last_active_indent_level: Option<&ListArg>,
 ) -> Option<FormattedTextLine> {
+    if last_active_indent_level.is_none()
+        && let Some(image) = parse_standalone_image(nodes)
+    {
+        return Some(FormattedTextLine::Image(image));
+    }
+
     let internal = parse_phrasing_content(nodes, Default::default());
 
     if !internal.is_empty() {

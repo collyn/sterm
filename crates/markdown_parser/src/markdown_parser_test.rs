@@ -2485,6 +2485,50 @@ fn test_parse_image_with_other_content() {
     assert!(matches!(result[4], FormattedTextLine::Line(_)));
 }
 
+#[test]
+fn test_parse_markdown_html_blocks_from_readme() {
+    let source = r##"<p align="center">
+  <img src="assets/logo.png" alt="Lunaris logo" />
+</p>
+
+<h1 align="center">Lunaris</h1>
+
+<p align="center">
+  <strong>Open-source remote desktop</strong>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#architecture">Architecture</a>
+</p>"##;
+
+    assert_eq!(
+        test_parse_markdown(source),
+        vec![
+            FormattedTextLine::Image(FormattedImage {
+                alt_text: "Lunaris logo".to_string(),
+                source: "assets/logo.png".to_string(),
+                title: None,
+            }),
+            FormattedTextLine::LineBreak,
+            FormattedTextLine::Heading(FormattedTextHeader {
+                heading_size: 1,
+                text: vec![FormattedTextFragment::plain_text("Lunaris")],
+            }),
+            FormattedTextLine::LineBreak,
+            FormattedTextLine::Line(vec![FormattedTextFragment::bold(
+                "Open-source remote desktop",
+            )]),
+            FormattedTextLine::LineBreak,
+            FormattedTextLine::Line(vec![
+                FormattedTextFragment::hyperlink("Features", "#features"),
+                FormattedTextFragment::plain_text(" ·\n  "),
+                FormattedTextFragment::hyperlink("Architecture", "#architecture"),
+            ]),
+        ]
+    );
+}
+
 // Table parsing tests
 
 #[test]

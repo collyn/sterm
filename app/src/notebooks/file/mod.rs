@@ -25,8 +25,6 @@ use warpui::{
     ViewHandle,
 };
 
-#[cfg(feature = "local_fs")]
-use crate::notebooks::post_process_notebook;
 use crate::{
     appearance::Appearance,
     cmd_or_ctrl_shift,
@@ -326,11 +324,11 @@ impl FileNotebookView {
     pub fn set_content(&mut self, content: &str, ctx: &mut ViewContext<Self>) {
         let doc_path = self.file_state.local_path().map(|p| p.to_path_buf());
         self.editor.update(ctx, |editor, ctx| {
-            editor.reset_with_markdown(content, ctx);
-            // Set the document path for resolving relative image paths
+            // Set the document path first so relative image paths resolve correctly.
             editor.model().update(ctx, |model, ctx| {
                 model.set_document_path(doc_path, ctx);
             });
+            editor.reset_with_markdown(content, ctx);
         });
     }
 
@@ -415,8 +413,7 @@ impl FileNotebookView {
                     }
                     match event {
                         FileModelEvent::FileLoaded { content, .. } => {
-                            let cleaned = post_process_notebook(content);
-                            me.set_content(&cleaned, ctx);
+                            me.set_content(content, ctx);
                             send_telemetry_from_ctx!(
                                 TelemetryEvent::OpenNotebook(me.open_telemetry_metadata(ctx)),
                                 ctx
@@ -457,8 +454,7 @@ impl FileNotebookView {
                             ctx.notify();
                         }
                         FileModelEvent::FileUpdated { content, .. } => {
-                            let cleaned = post_process_notebook(content);
-                            me.set_content(&cleaned, ctx);
+                            me.set_content(content, ctx);
                         }
                         FileModelEvent::FileSaved { .. } | FileModelEvent::FailedToSave { .. } => {}
                     }
