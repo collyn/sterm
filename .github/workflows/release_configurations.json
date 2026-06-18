@@ -6,8 +6,8 @@
             "type": "weekly",
             "is_prerelease": false,
             "is_autopush": false,
-            "release_base_name": "Eterm",
-            "release_body_text": "Eterm release (oss channel)",
+            "release_base_name": "Sterm",
+            "release_body_text": "Sterm release (fork of Sterm Terminal, oss channel)",
             "changelog_slack_channel": "",
             "gcs_cache_control_value": "",
             "web_gcs_bucket_prefix": ""

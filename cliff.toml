@@ -1,4 +1,4 @@
-# git-cliff configuration - used to automatically generate changelogs since the last tag for Eterm releases.
+# git-cliff configuration - used to automatically generate changelogs since the last tag for Sterm releases.
 #
 # Design principles:
 # - Group by conventional commit types (feat/fix/refactor/docs/test/build/ci/ui/perf/chore).
@@ -8,13 +8,13 @@
 # - Output a clean fragment (no H1 header or date block), which the workflow prepends below the release body description.
 
 [changelog]
-# 顶部不输出 `# Changelog` 大标题;由 publish_release 步骤负责整体排版。
+# Do not output H1 header '# Changelog'; the publish_release step handles the overall layout.
 header = ""
 
 body = """
 {%- if previous %}
 {%- if previous.version %}
-**变更范围**: [`{{ previous.version }}` … `{{ version }}`]({{ self::compare_url(prev=previous.version, curr=version) }})
+**Change Range**: [`{{ previous.version }}` … `{{ version }}`]({{ self::compare_url(prev=previous.version, curr=version) }})
 
 {% endif -%}
 {%- endif -%}
@@ -33,38 +33,38 @@ https://github.com/zerx-lab/warp/commit/{{ sha }}
 {%- endmacro -%}
 """
 
-# tag 之间的对比页脚由模板里的 compare_url 输出,这里不再额外追加 footer。
+# The comparison footer between tags is output by compare_url in the template, so no extra footer is appended here.
 footer = ""
 
 trim = true
 
 [git]
-# 不解析 conventional commits 失败时不报错;落到 commit_parsers 的兜底分组。
+# If parsing conventional commits fails, do not error; fallback to the default group in commit_parsers.
 conventional_commits = true
 filter_unconventional = false
-# 不拆分多行 body — 一条 commit 一条记录。
+# Do not split multi-line bodies - one commit per record.
 split_commits = false
 
-# tag 命名:v 前缀 + 任意尾巴(v2026.05.27.2 / v2026.05.06.preview / v2026.05.21.zaptest01)。
+# Tag naming pattern: v prefix + any suffix (e.g. v2026.05.27.2 / v2026.05.06.preview).
 tag_pattern = "v[0-9].*"
 
-# 顺序按 commit 在 git log 中出现的顺序(新 → 旧),保持可读性。
+# Order by commit appearance in git log (newest first) to maintain readability.
 topo_order = false
 sort_commits = "newest"
 
-# 忽略归并 / 内部 release tag 这类对用户无意义的 commit。
+# Ignore merges / internal release tags that are meaningless to users.
 commit_preprocessors = [
-    # 去掉首行末尾的 PR 编号括号,避免 `(#171)` 与下文 hash 链接重复显示。
-    # 用 `(?m)` 让 `$` 锚到每行末尾(commit subject 是第一行),而不是整段 message 末尾。
+    # Remove the PR number in parentheses at the end of the first line to avoid duplication with the hash link.
+    # Use (?m) to anchor $ to the end of each line (commit subject is the first line), not the end of the entire message.
     { pattern = '(?m) \(#[0-9]+\)$', replace = "" },
-    # 去掉 commit subject 开头的 gitmoji 前缀(如 "♻️ refactor: ..."),
-    # 否则后续 `^refactor` 这类分组规则无法命中,会落到「其他」。
+    # Remove the gitmoji prefix from the start of the commit subject (e.g. "♻️ refactor: ..."),
+    # otherwise group rules like ^refactor will not match and fall back to "Others".
     { pattern = '^(♻️|✨|🐛|🎨|🚀|🔥|💄|📝|🛠|⚡|🚧|🐳|🔧|🚨|✅|♿|🔒)[️]?\s*', replace = "" },
 ]
 
-# 顺序敏感:第一个匹配生效。把噪声 skip 放最前面。
+# Order sensitive: the first match takes effect. Put noise skips at the top.
 commit_parsers = [
-    # 噪声:跳过
+    # Noise: skip
     { message = "^[Mm]erge ", skip = true },
     { message = "^[Rr]evert ", skip = true },
     { message = "^[Bb]ump ", skip = true },
