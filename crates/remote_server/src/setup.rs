@@ -359,13 +359,13 @@ pub fn install_script(staging_tarball_path: Option<&str>) -> String {
         .replace("{staging_tarball_path}", staging_tarball_path.unwrap_or(""))
 }
 
-/// 构造 Zap CLI release 资产下载基址。
 fn download_url() -> String {
     let release_path = match ChannelState::app_version() {
         Some(tag) => format!("download/{tag}"),
         None => "latest/download".to_string(),
     };
-    format!("https://github.com/zerx-lab/warp/releases/{release_path}")
+    let repo = option_env!("GITHUB_REPOSITORY").unwrap_or("collyn/sterm");
+    format!("https://github.com/{repo}/releases/{release_path}")
 }
 
 fn version_suffix() -> String {
@@ -378,10 +378,10 @@ fn version_suffix() -> String {
     }
 }
 
-/// 返回指定远端平台对应的 Zap CLI tarball URL。
+/// 返回指定远端平台对应的 Sterm CLI tarball URL。
 pub fn download_tarball_url(platform: &RemotePlatform) -> String {
     format!(
-        "{}/zap-{}-{}.tar.gz",
+        "{}/sterm-{}-{}.tar.gz",
         download_url(),
         platform.os.as_str(),
         platform.arch.as_str(),

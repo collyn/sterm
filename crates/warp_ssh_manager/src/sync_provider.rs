@@ -76,9 +76,8 @@ impl SyncDataProvider for SshSyncProvider {
     }
 
     fn collect_data(&self, token: &str) -> Result<serde_json::Value, SyncEngineError> {
-        let nodes =
-            with_conn(|conn| Ok(SshRepository::list_nodes(conn)?))
-                .map_err(|e| SyncEngineError::Provider(e.to_string()))?;
+        let nodes = with_conn(|conn| Ok(SshRepository::list_nodes(conn)?))
+            .map_err(|e| SyncEngineError::Provider(e.to_string()))?;
 
         let mut sync_nodes = Vec::new();
         let mut sync_servers = Vec::new();
@@ -203,7 +202,9 @@ impl SyncDataProvider for SshSyncProvider {
                     rollback_keychain_writes(&self.secret_store, &written_secrets);
                     return Err(SyncEngineError::Provider(format!(
                         "读取 keychain 旧值失败 ({}, {:?}): {e}。已回滚 {} 项,请确认密钥库可用后重试下载",
-                        s.node_id, s.kind, written_secrets.len()
+                        s.node_id,
+                        s.kind,
+                        written_secrets.len()
                     )));
                 }
             };
@@ -274,14 +275,16 @@ impl SyncDataProvider for SshSyncProvider {
         // 违背用户清除意图(PR #161 七轮 review)
         for (node_id, kind) in &explicit_clears {
             if let Err(e) = self.secret_store.delete(node_id, *kind) {
-                log::warn!("清理 explicit-clear keychain 项失败 {node_id}/{:?}: {e}", kind);
+                log::warn!(
+                    "清理 explicit-clear keychain 项失败 {node_id}/{:?}: {e}",
+                    kind
+                );
             }
         }
 
         // ---- 阶段 3b ---- 清理 orphan keychain:本地原有但远程已删除的 node_id 对应的密码,
         // 必须显式 delete,否则同 UUID 节点重新出现时会读到陈旧密码 (PR #161 review #4)
-        let new_node_ids: HashSet<&str> =
-            ssh_data.nodes.iter().map(|n| n.id.as_str()).collect();
+        let new_node_ids: HashSet<&str> = ssh_data.nodes.iter().map(|n| n.id.as_str()).collect();
         for old_id in &existing_node_ids {
             if new_node_ids.contains(old_id.as_str()) {
                 continue;
@@ -309,10 +312,7 @@ struct WrittenSecret {
 /// - prior_value=Some → 写回旧值,避免用户既有密码被吞
 /// - prior_value=None → delete,避免 orphan
 /// 任何步骤失败仅 log,不阻塞调用方(尽力而为)。
-fn rollback_keychain_writes<S: SshSecretStore + ?Sized>(
-    store: &S,
-    written: &[WrittenSecret],
-) {
+fn rollback_keychain_writes<S: SshSecretStore + ?Sized>(store: &S, written: &[WrittenSecret]) {
     for entry in written {
         let res = match &entry.prior_value {
             Some(v) => store.set(&entry.node_id, entry.kind, v.as_str()),
@@ -321,7 +321,8 @@ fn rollback_keychain_writes<S: SshSecretStore + ?Sized>(
         if let Err(e) = res {
             log::warn!(
                 "回滚 keychain 写入失败 {}/{:?}: {e}(secret 可能保持新值或成为 orphan)",
-                entry.node_id, entry.kind
+                entry.node_id,
+                entry.kind
             );
         }
     }
@@ -354,17 +355,13 @@ fn read_secret(
     }
 }
 
-fn encrypt_optional(
-    token: &str,
-    value: Option<&str>,
-) -> Result<Option<String>, SyncEngineError> {
+fn encrypt_optional(token: &str, value: Option<&str>) -> Result<Option<String>, SyncEngineError> {
     match value {
         None => Ok(None),
         // 空字符串视为"无密码",不上传(与既往行为兼容,避免空字符串密文污染)
         Some(s) if s.is_empty() => Ok(None),
         Some(s) => Ok(Some(
-            crypto::encrypt(token, s)
-                .map_err(|e| SyncEngineError::Crypto(e.to_string()))?,
+            crypto::encrypt(token, s).map_err(|e| SyncEngineError::Crypto(e.to_string()))?,
         )),
     }
 }
@@ -406,12 +403,14 @@ fn topologically_sort_nodes(nodes: &[SyncNode]) -> Vec<SyncNode> {
             if has_cycle_membership(n, nodes) {
                 log::warn!(
                     "apply_data: 节点 {} 处于循环引用中(parent_id {:?}),已降级为根节点",
-                    n.id, n.parent_id
+                    n.id,
+                    n.parent_id
                 );
             } else {
                 log::warn!(
                     "apply_data: 节点 {} 的 parent_id {:?} 在数据集中不存在,作为根节点插入",
-                    n.id, n.parent_id
+                    n.id,
+                    n.parent_id
                 );
             }
             let mut orphan = n.clone();
@@ -547,38 +546,37 @@ mod tests {
     #[test]
     fn test_ssh_sync_data_roundtrip() {
         let data = SshSyncData {
-            nodes: vec![
-                SyncNode {
-                    id: "n1".to_string(),
-                    parent_id: None,
-                    kind: "folder".to_string(),
-                    name: "Root".to_string(),
-                    sort_order: 0,
-                    is_collapsed: false,
-                },
-            ],
-            servers: vec![
-                SyncServer {
-                    node_id: "s1".to_string(),
-                    host: "h".to_string(),
-                    port: 22,
-                    username: "u".to_string(),
-                    auth_type: "password".to_string(),
-                    key_path: None,
-                    startup_command: None,
-                    notes: None,
-                    password_encrypted: Some("enc".to_string()),
-                    passphrase_encrypted: None,
-                    root_password_encrypted: None,
-                },
-            ],
+            nodes: vec![SyncNode {
+                id: "n1".to_string(),
+                parent_id: None,
+                kind: "folder".to_string(),
+                name: "Root".to_string(),
+                sort_order: 0,
+                is_collapsed: false,
+            }],
+            servers: vec![SyncServer {
+                node_id: "s1".to_string(),
+                host: "h".to_string(),
+                port: 22,
+                username: "u".to_string(),
+                auth_type: "password".to_string(),
+                key_path: None,
+                startup_command: None,
+                notes: None,
+                password_encrypted: Some("enc".to_string()),
+                passphrase_encrypted: None,
+                root_password_encrypted: None,
+            }],
         };
         let json = serde_json::to_string(&data).unwrap();
         let parsed: SshSyncData = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.nodes.len(), 1);
         assert_eq!(parsed.servers.len(), 1);
         assert_eq!(parsed.nodes[0].id, "n1");
-        assert_eq!(parsed.servers[0].password_encrypted, Some("enc".to_string()));
+        assert_eq!(
+            parsed.servers[0].password_encrypted,
+            Some("enc".to_string())
+        );
     }
 
     #[test]
@@ -599,7 +597,10 @@ mod tests {
             is_collapsed: false,
         };
         let json = serde_json::to_string(&node).unwrap();
-        assert!(json.contains("\"parent_id\":null"), "parent_id=None 应序列化为 null");
+        assert!(
+            json.contains("\"parent_id\":null"),
+            "parent_id=None 应序列化为 null"
+        );
         let parsed: SyncNode = serde_json::from_str(&json).unwrap();
         assert!(parsed.parent_id.is_none());
     }

@@ -43,24 +43,24 @@ if [ -n "$staging_tarball_path" ]; then
   case "$staging_tarball_path" in
     "~"|"~/"*) staging_tarball_path="${HOME}${staging_tarball_path#\~}" ;;
   esac
-  mv "$staging_tarball_path" "$tmpdir/zap.tar.gz"
+  mv "$staging_tarball_path" "$tmpdir/sterm.tar.gz"
 else
-  url="{download_base_url}/zap-$os_name-$arch_name.tar.gz"
+  url="{download_base_url}/sterm-$os_name-$arch_name.tar.gz"
   if command -v curl >/dev/null 2>&1; then
-    curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/zap.tar.gz"
+    curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/sterm.tar.gz"
   elif command -v wget >/dev/null 2>&1; then
-    wget -q -O "$tmpdir/zap.tar.gz" "$url"
+    wget -q -O "$tmpdir/sterm.tar.gz" "$url"
   else
     echo "error: neither curl nor wget is available" >&2
     exit 3
   fi
 fi
 
-tar -xzf "$tmpdir/zap.tar.gz" -C "$tmpdir"
+tar -xzf "$tmpdir/sterm.tar.gz" -C "$tmpdir"
 
 bin="$tmpdir/{binary_name}"
 if [ ! -f "$bin" ]; then
-  bin=$(find "$tmpdir" -type f \( -name 'sterm' -o -name 'warp-oss' -o -name 'oz*' \) ! -path "$tmpdir/resources/*" ! -name '*.tar.gz' | head -n1)
+  bin=$(find "$tmpdir" -type f \( -name 'sterm' -o -name 'sterm-oss' -o -name 'zap' -o -name 'warp-oss' -o -name 'oz*' \) ! -path "$tmpdir/resources/*" ! -name '*.tar.gz' | head -n1)
 fi
 if [ -z "$bin" ]; then echo "no binary found in tarball" >&2; exit 1; fi
 chmod +x "$bin"

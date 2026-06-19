@@ -66,8 +66,7 @@ impl OnboardingPromptBlock {
         const LINE_ONE: &str = "Next, let’s set up your prompt. Zap has a custom prompt builder or you can select PS1 to honor your pre-existing prompt configuration.";
         const LINE_TWO: &str =
             "Zap works with many custom prompts like oh-my-zsh, Starship, Powerlevel10K. ";
-        const LINK_DESTINATION: &str =
-            "";
+        const LINK_DESTINATION: &str = "";
 
         Flex::column()
             .with_children([

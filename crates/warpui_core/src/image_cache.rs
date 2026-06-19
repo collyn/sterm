@@ -479,6 +479,17 @@ impl StaticImage {
     pub fn rgba_bytes(&self) -> &[u8] {
         self.img.as_raw().as_slice()
     }
+
+    /// Returns a cropped copy of this image. Coordinates are clamped to image bounds.
+    pub fn crop(&self, x: u32, y: u32, width: u32, height: u32) -> Self {
+        let (img_w, img_h) = self.img.dimensions();
+        let x = x.min(img_w.saturating_sub(1));
+        let y = y.min(img_h.saturating_sub(1));
+        let width = width.min(img_w - x);
+        let height = height.min(img_h - y);
+        let cropped = image::imageops::crop(&mut self.img.clone(), x, y, width, height).to_image();
+        Self { img: cropped }
+    }
 }
 
 /// A representation of a single frame in an animated image.

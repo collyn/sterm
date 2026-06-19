@@ -28,7 +28,10 @@ pub fn open_ssh_manager_panel() -> TestStep {
             .views_of_type::<Workspace>(window_id)
             .and_then(|views| views.first().map(|view| view.id()))
             .expect("no workspace view");
-        log::info!("dispatching ToggleSshManager to workspace view {}", workspace_view_id);
+        log::info!(
+            "dispatching ToggleSshManager to workspace view {}",
+            workspace_view_id
+        );
         app.dispatch_typed_action(
             window_id,
             &[workspace_view_id],
@@ -84,9 +87,9 @@ pub fn select_group_by_id(folder_id: Arc<Mutex<Option<String>>>) -> TestStep {
         let view = ssh_server_view(app, window_id);
         let gid = folder_id.lock().unwrap().clone();
         view.update(app, |v, ctx| {
-            let index = gid.as_ref().and_then(|gid| {
-                v.folders().iter().position(|(id, _)| id == gid)
-            });
+            let index = gid
+                .as_ref()
+                .and_then(|gid| v.folders().iter().position(|(id, _)| id == gid));
             v.handle_action(&SshServerAction::SelectGroup(index), ctx);
         });
     })

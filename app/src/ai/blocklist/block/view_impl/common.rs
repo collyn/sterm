@@ -2106,17 +2106,16 @@ fn render_mermaid_diagram_section<A: Action>(
     let header_actions = {
         let copy_mouse = MouseStateHandle::default();
         let markdown_source = diagram.markdown_source.clone();
-        let header_icon_color = blended_colors::text_main(
-            theme,
-            theme.surface_2(),
-        );
+        let header_icon_color = blended_colors::text_main(theme, theme.surface_2());
         let copy_btn = if let Some(factory) = copy_action_factory {
-            Some(icon_button(appearance, Icon::Copy, false, copy_mouse)
-                .build()
-                .on_click(move |ctx, _, _| {
-                    ctx.dispatch_typed_action(factory(markdown_source.clone()));
-                })
-                .finish())
+            Some(
+                icon_button(appearance, Icon::Copy, false, copy_mouse)
+                    .build()
+                    .on_click(move |ctx, _, _| {
+                        ctx.dispatch_typed_action(factory(markdown_source.clone()));
+                    })
+                    .finish(),
+            )
         } else {
             None
         };

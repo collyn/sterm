@@ -202,7 +202,7 @@ fn oss_remote_server_dir_uses_zap_namespace() {
 
 #[test]
 fn oss_binary_name_matches_zap_cli() {
-    assert_eq!(binary_name(), "warp-oss");
+    assert_eq!(binary_name(), "sterm");
 }
 
 #[test]
@@ -216,7 +216,7 @@ fn oss_download_tarball_url_uses_github_release_asset() {
 
     assert_eq!(
         url,
-        "https://github.com/zerx-lab/warp/releases/latest/download/zap-linux-x86_64.tar.gz"
+        "https://github.com/collyn/sterm/releases/latest/download/sterm-linux-x86_64.tar.gz"
     );
     assert!(!url.contains("app.warp.dev"));
     assert!(!url.contains("/download/cli"));
@@ -226,9 +226,8 @@ fn oss_download_tarball_url_uses_github_release_asset() {
 fn install_script_uses_zap_asset_and_staging_placeholder() {
     let script = install_script(Some("~/.zap/remote-server/zap-upload.tar.gz"));
 
-    assert!(script
-        .contains("staging_tarball_path=\"~/.zap/remote-server/zap-upload.tar.gz\""));
-    assert!(script.contains("zap-$os_name-$arch_name.tar.gz"));
+    assert!(script.contains("staging_tarball_path=\"~/.zap/remote-server/zap-upload.tar.gz\""));
+    assert!(script.contains("sterm-$os_name-$arch_name.tar.gz"));
     assert!(!script.contains("app.warp.dev"));
     assert!(!script.contains("/download/cli"));
 }

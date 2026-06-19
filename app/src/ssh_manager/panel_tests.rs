@@ -9,9 +9,7 @@ use warp_ssh_manager::{NodeKind, SshNode};
 // --- 测试辅助 --------------------------------------------------------------
 
 fn ts() -> NaiveDateTime {
-    chrono::DateTime::from_timestamp(0, 0)
-        .unwrap()
-        .naive_utc()
+    chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc()
 }
 
 fn folder(id: &str, parent_id: Option<&str>, name: &str, sort_order: i32) -> SshNode {
@@ -78,7 +76,10 @@ fn parent_server_under_folder_selected_returns_folder_id() {
 #[test]
 fn parent_invalid_selected_id_returns_none() {
     let nodes = vec![folder("f1", None, "Root", 0)];
-    assert_eq!(resolve_parent_for_new_node(Some("nonexistent"), &nodes), None);
+    assert_eq!(
+        resolve_parent_for_new_node(Some("nonexistent"), &nodes),
+        None
+    );
 }
 
 #[test]
@@ -182,10 +183,7 @@ fn sort_respects_parent_child_order() {
 
 #[test]
 fn sort_multiple_roots_by_sort_order() {
-    let nodes = vec![
-        folder("f2", None, "B", 1),
-        folder("f1", None, "A", 0),
-    ];
+    let nodes = vec![folder("f2", None, "B", 1), folder("f1", None, "A", 0)];
     let depths = compute_depths(&nodes);
     let sorted = sort_for_display(nodes, &depths);
     assert_eq!(sorted[0].id, "f1");

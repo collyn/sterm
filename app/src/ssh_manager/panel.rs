@@ -30,8 +30,8 @@ use warpui::{
 };
 
 use warp_ssh_manager::{
-    AuthType, KeychainSecretStore, NodeKind, SecretKind, SshNode, SshRepository,
-    SshSecretStore, SshServerInfo,
+    AuthType, KeychainSecretStore, NodeKind, SecretKind, SshNode, SshRepository, SshSecretStore,
+    SshServerInfo,
 };
 
 use settings::Setting;
@@ -458,7 +458,11 @@ impl SshManagerPanel {
 
             let parent = source_node.parent_id;
             let cloned_info = SshServerInfo::clone_from_template(&source_info, String::new());
-            let name = unique_name(c, parent.as_deref(), &format!("{} (copy)", source_node.name))?;
+            let name = unique_name(
+                c,
+                parent.as_deref(),
+                &format!("{} (copy)", source_node.name),
+            )?;
 
             let new_node = SshRepository::create_server(c, parent.as_deref(), &name, &cloned_info)?;
 
@@ -695,7 +699,12 @@ impl SshManagerPanel {
         ctx.notify();
     }
 
-    fn enter_rename(&mut self, node_id: String, is_newly_created: bool, ctx: &mut ViewContext<Self>) {
+    fn enter_rename(
+        &mut self,
+        node_id: String,
+        is_newly_created: bool,
+        ctx: &mut ViewContext<Self>,
+    ) {
         let current_name = self
             .nodes
             .iter()
@@ -734,7 +743,11 @@ impl SshManagerPanel {
         });
 
         ctx.focus(&editor);
-        self.rename_state = Some(RenameState { node_id, editor, is_newly_created });
+        self.rename_state = Some(RenameState {
+            node_id,
+            editor,
+            is_newly_created,
+        });
         ctx.notify();
     }
 
@@ -1736,9 +1749,7 @@ impl TypedActionView for SshManagerPanel {
 
     fn handle_action(&mut self, action: &SshManagerPanelAction, ctx: &mut ViewContext<Self>) {
         match action {
-            SshManagerPanelAction::AddRootFolder => {
-                self.on_add_folder_with_parent(None, ctx)
-            }
+            SshManagerPanelAction::AddRootFolder => self.on_add_folder_with_parent(None, ctx),
             SshManagerPanelAction::AddFolder => {
                 let parent = self.parent_for_new_node();
                 self.on_add_folder_with_parent(parent, ctx)
@@ -1800,8 +1811,7 @@ impl View for SshManagerPanel {
         // PRODUCT.md §2:Candidates 区段在已保存树**上方**,共享同一面板
         // 水平内边距。区段在 view-model 还没 refresh 时返回 Empty,不会占
         // 高度。自动发现关闭时不渲染区段。
-        let auto_discover =
-            *SshSettings::as_ref(app).enable_ssh_auto_discovery.value();
+        let auto_discover = *SshSettings::as_ref(app).enable_ssh_auto_discovery.value();
         let candidates_section = if auto_discover {
             Container::new(self.render_candidates(appearance, app))
                 .with_padding_left(PANEL_HORIZONTAL_PADDING - ITEM_PADDING_HORIZONTAL)
@@ -1858,10 +1868,7 @@ impl View for SshManagerPanel {
 /// - 选中文件夹 → 作为子节点创建在该文件夹下
 /// - 选中服务器 → 作为兄弟节点创建（继承服务器的父级）
 /// - 无选中 → 创建在根级（返回 None）
-fn resolve_parent_for_new_node(
-    selected_id: Option<&str>,
-    nodes: &[SshNode],
-) -> Option<String> {
+fn resolve_parent_for_new_node(selected_id: Option<&str>, nodes: &[SshNode]) -> Option<String> {
     let id = selected_id?;
     let node = nodes.iter().find(|n| n.id == id)?;
     match node.kind {

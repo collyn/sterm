@@ -27,6 +27,10 @@ pub struct Image {
     top_aligned: bool,
     right_aligned: bool,
 
+    /// Optional source rectangle (x, y, width, height) for cropping the image.
+    /// Useful for sprite sheets where only a portion of the image should be rendered.
+    source_rect: Option<(u32, u32, u32, u32)>,
+
     /// The "back up" element to render when an asset is not ready or encountered an error.
     /// This could be None in two situations: (1) the caller does not provide a before_load_element
     /// or (2) the caller provided one but it's no longer needed due to the image having loaded.
@@ -64,6 +68,7 @@ impl Image {
             corner_radius: CornerRadius::default(),
             top_aligned: false,
             right_aligned: false,
+            source_rect: None,
             before_load_element: None,
             requested_repaint_after_load: false,
             #[cfg(debug_assertions)]
@@ -73,6 +78,13 @@ impl Image {
 
     pub fn with_corner_radius(mut self, radius: CornerRadius) -> Self {
         self.corner_radius = radius;
+        self
+    }
+
+    /// Sets a source rectangle to crop the image. Useful for sprite sheets.
+    /// Parameters: (x, y, width, height) in pixels.
+    pub fn with_source_rect(mut self, rect: (u32, u32, u32, u32)) -> Self {
+        self.source_rect = Some(rect);
         self
     }
 
@@ -143,6 +155,12 @@ impl Image {
         bounds: Vector2I,
         ctx: &mut PaintContext,
     ) {
+        // Apply source_rect crop first so we compute dimensions from the cropped image
+        let image = if let Some((sx, sy, sw, sh)) = self.source_rect {
+            Arc::new(image.crop(sx, sy, sw, sh))
+        } else {
+            image
+        };
         let desired_image_size = match self.cache_option {
             CacheOption::Original => {
                 dimensions(image.size().to_f32(), bounds.to_f32(), self.fit_type)

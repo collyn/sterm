@@ -1762,24 +1762,24 @@ fn parse_inline_token<'a, E: ContextError<&'a str> + ParseError<&'a str>>(
 fn parse_inline_html_tag<'a, E: ContextError<&'a str> + ParseError<&'a str>>(
     input: &'a str,
 ) -> IResult<&'a str, InlineToken<'a>, E> {
-    let (remaining, (full_tag, tag_name)) = consumed(
-        map(
-            tuple((
-                char('<'),
-                nom::combinator::opt(char('/')),
-                take_while1(|c: char| c.is_ascii_alphabetic()),
-                nom::combinator::verify(
-                    take_while(|c: char| c != '>'),
-                    |attrs: &str| attrs.is_empty() || attrs.starts_with(|c: char| c.is_whitespace() || c == '/')
-                ),
-                char('>'),
-            )),
-            |(_, _, tag_name, _, _)| tag_name
-        )
-    )(input)?;
+    let (remaining, (full_tag, tag_name)) = consumed(map(
+        tuple((
+            char('<'),
+            nom::combinator::opt(char('/')),
+            take_while1(|c: char| c.is_ascii_alphabetic()),
+            nom::combinator::verify(take_while(|c: char| c != '>'), |attrs: &str| {
+                attrs.is_empty() || attrs.starts_with(|c: char| c.is_whitespace() || c == '/')
+            }),
+            char('>'),
+        )),
+        |(_, _, tag_name, _, _)| tag_name,
+    ))(input)?;
 
     let lower = tag_name.to_lowercase();
-    if matches!(lower.as_str(), "br" | "div" | "i" | "b" | "u" | "s" | "span") {
+    if matches!(
+        lower.as_str(),
+        "br" | "div" | "i" | "b" | "u" | "s" | "span"
+    ) {
         Ok((remaining, InlineToken::HtmlTag(full_tag)))
     } else {
         Err(nom::Err::Error(make_error(input, ErrorKind::Tag)))

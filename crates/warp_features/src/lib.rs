@@ -661,6 +661,9 @@ pub enum FeatureFlag {
     /// space is not rendered while the agent is running.
     TrimTrailingBlankLines,
 
+    /// Shows a pixel-art inspired overview of active CLI agents in the tools panel.
+    PixelAgentsPanel,
+
     /// Gates the new SSH remote server flow that installs and connects to a
     /// persistent binary on the remote machine instead of using ControlMaster
     /// for command execution.
@@ -745,6 +748,7 @@ pub const DOGFOOD_FLAGS: &[FeatureFlag] = &[
     FeatureFlag::ConfigurableContextWindow,
     FeatureFlag::DragTabsToWindows,
     FeatureFlag::ServerFileBrowser,
+    FeatureFlag::PixelAgentsPanel,
 ];
 
 /// Features enabled for feature preview build users (e.g.: Friends of Zap).

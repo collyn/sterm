@@ -10,11 +10,11 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use warp_ssh_manager::secrets::{SecretKind, SshSecretStore};
+use warp_ssh_manager::types::{AuthType, SshServerInfo};
 use zap_sftp::session::{AuthMethod, SftpSession};
 use zap_sftp::types::OpenOptions;
 use zap_sftp::Sftp;
-use warp_ssh_manager::secrets::{SecretKind, SshSecretStore};
-use warp_ssh_manager::types::{AuthType, SshServerInfo};
 
 use super::types::{FileEntry, FileEntryType};
 
@@ -69,8 +69,14 @@ pub fn connect_from_server(
     secret_store: &dyn SshSecretStore,
 ) -> Result<SftpSession, SftpOpsError> {
     let auth = build_auth_method(server, secret_store)?;
-    SftpSession::connect(&server.host, server.port, &server.username, auth, Some(CONNECT_TIMEOUT))
-        .map_err(|e| SftpOpsError::Connection(e.to_string()))
+    SftpSession::connect(
+        &server.host,
+        server.port,
+        &server.username,
+        auth,
+        Some(CONNECT_TIMEOUT),
+    )
+    .map_err(|e| SftpOpsError::Connection(e.to_string()))
 }
 
 /// 列出远程目录内容，转换为 UI 层 FileEntry
@@ -212,8 +218,7 @@ pub fn upload_file_streaming(
                 Ok(()) => Ok(()),
                 Err(_) => {
                     let remote_display = remote_path.display();
-                    let backup_path =
-                        PathBuf::from(format!("{remote_display}.sftp_backup"));
+                    let backup_path = PathBuf::from(format!("{remote_display}.sftp_backup"));
                     let backup_created = sftp
                         .rename(
                             remote_path,
@@ -263,9 +268,9 @@ pub fn upload_file_streaming(
             if let Err(e) = rename_result {
                 // rename 失败时保留远程临时文件，避免数据丢失
                 let temp_display = temp_remote_path.display();
-                return Err(SftpOpsError::Operation(
-                    format!("重命名远程临时文件失败: {e}。临时文件: {temp_display}"),
-                ));
+                return Err(SftpOpsError::Operation(format!(
+                    "重命名远程临时文件失败: {e}。临时文件: {temp_display}"
+                )));
             }
         }
         Err(_) => {
@@ -324,7 +329,9 @@ pub fn download_file_streaming(
                 cb(transferred, total_size);
             }
         }
-        local_file.flush().map_err(|e| SftpOpsError::LocalIo(e.to_string()))?;
+        local_file
+            .flush()
+            .map_err(|e| SftpOpsError::LocalIo(e.to_string()))?;
         Ok(())
     })();
 
@@ -334,9 +341,9 @@ pub fn download_file_streaming(
             if let Err(e) = fs::rename(&temp_local_path, local_path) {
                 // rename 失败时保留本地临时文件，避免数据丢失
                 let temp_display = temp_local_path.display();
-                return Err(SftpOpsError::LocalIo(
-                    format!("重命名失败: {e}。已下载的临时文件保留在: {temp_display}"),
-                ));
+                return Err(SftpOpsError::LocalIo(format!(
+                    "重命名失败: {e}。已下载的临时文件保留在: {temp_display}"
+                )));
             }
         }
         Err(_) => {
@@ -362,8 +369,7 @@ pub fn upload_dir_recursive(
 
     sftp.create_dir(remote_dir)?;
 
-    let entries = fs::read_dir(local_dir)
-        .map_err(|e| SftpOpsError::LocalIo(e.to_string()))?;
+    let entries = fs::read_dir(local_dir).map_err(|e| SftpOpsError::LocalIo(e.to_string()))?;
 
     for entry in entries {
         if cancel_flag.load(Ordering::SeqCst) {
@@ -425,12 +431,24 @@ pub fn download_dir_recursive(
 
         match entry.metadata.file_type {
             zap_sftp::types::FileType::Dir => {
-                download_dir_recursive(sftp, &safe_remote_path, &local_path, progress_cb, cancel_flag)?;
+                download_dir_recursive(
+                    sftp,
+                    &safe_remote_path,
+                    &local_path,
+                    progress_cb,
+                    cancel_flag,
+                )?;
             }
             zap_sftp::types::FileType::File
             | zap_sftp::types::FileType::Symlink
             | zap_sftp::types::FileType::Other => {
-                download_file_streaming(sftp, &safe_remote_path, &local_path, progress_cb, cancel_flag)?;
+                download_file_streaming(
+                    sftp,
+                    &safe_remote_path,
+                    &local_path,
+                    progress_cb,
+                    cancel_flag,
+                )?;
             }
         }
     }
@@ -449,22 +467,16 @@ fn build_auth_method(
                 .get(&server.node_id, SecretKind::Password)
                 .map_err(|e| SftpOpsError::NoCredentials(format!("读取密码失败: {e}")))?
                 .ok_or_else(|| {
-                    SftpOpsError::NoCredentials(format!(
-                        "服务器 {} 未存储密码",
-                        server.host
-                    ))
+                    SftpOpsError::NoCredentials(format!("服务器 {} 未存储密码", server.host))
                 })?;
             Ok(AuthMethod::Password {
                 password: password.to_string(),
             })
         }
         AuthType::Key => {
-            let key_path = server
-                .key_path
-                .as_ref()
-                .ok_or_else(|| {
-                    SftpOpsError::NoCredentials("密钥认证但未指定密钥路径".to_string())
-                })?;
+            let key_path = server.key_path.as_ref().ok_or_else(|| {
+                SftpOpsError::NoCredentials("密钥认证但未指定密钥路径".to_string())
+            })?;
             let expanded = shellexpand_path(key_path);
             let passphrase = secret_store
                 .get(&server.node_id, SecretKind::Passphrase)

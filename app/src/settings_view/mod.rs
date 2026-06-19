@@ -67,8 +67,8 @@ mod about_page;
 mod agent_providers_widget;
 mod ai_page;
 mod appearance_page;
-mod code_page;
 mod cloud_sync_page;
+mod code_page;
 mod directory_color_add_picker;
 mod execution_profile_view;
 mod features;
@@ -1262,9 +1262,9 @@ impl SettingsView {
                                 self.ai_page_handle.update(ctx, |view, ctx| {
                                     view.set_active_subpage(Some(subpage), ctx);
                                 });
-                                let match_data = self
-                                    .ai_page_handle
-                                    .update(ctx, |view, ctx| view.update_filter(&search_query, ctx));
+                                let match_data = self.ai_page_handle.update(ctx, |view, ctx| {
+                                    view.update_filter(&search_query, ctx)
+                                });
                                 self.subpage_filter.insert(subpage_section, match_data);
                             }
                         }

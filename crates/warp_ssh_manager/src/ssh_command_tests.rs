@@ -97,7 +97,12 @@ fn test_connection_requires_password_for_password_auth() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let result = rt.block_on(test_connection(&s, None));
     assert_eq!(result.status, ConnectionStatus::Offline);
-    assert!(result.error_message.unwrap().contains("Password not provided"));
+    assert!(
+        result
+            .error_message
+            .unwrap()
+            .contains("Password not provided")
+    );
 }
 
 #[test]
@@ -263,7 +268,9 @@ fn password_auth_args_destination_before_echo_ok_and_after_options() {
 
     // destination 必须出现在所有 -o 选项之后
     // 找最后一个 -o 选项的位置
-    let last_o_pos = joined.rfind("-o ").expect("expected at least one -o option");
+    let last_o_pos = joined
+        .rfind("-o ")
+        .expect("expected at least one -o option");
     assert!(
         last_o_pos < dest_pos,
         "all -o options must come before destination; got joined: {joined}"
@@ -303,7 +310,9 @@ fn key_auth_args_destination_comes_after_options() {
     let echo_pos = joined
         .find("echo ok")
         .expect("`echo ok` must appear in args");
-    let last_o_pos = joined.rfind("-o ").expect("expected at least one -o option");
+    let last_o_pos = joined
+        .rfind("-o ")
+        .expect("expected at least one -o option");
 
     assert!(
         last_o_pos < dest_pos,

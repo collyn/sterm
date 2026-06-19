@@ -12,14 +12,13 @@ pub fn icon_from_file_path(path: &str, appearance: &Appearance) -> Option<Box<dy
     let theme = appearance.theme();
     let parsed_path = Path::new(path);
 
-    let file_name = parsed_path.file_name().and_then(|n| n.to_str()).unwrap_or(path);
+    let file_name = parsed_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(path);
     if let Some(svg_path) = super::material_icons::get_file_icon(file_name) {
         return Some(
-            Image::new(
-                AssetSource::Bundled { path: svg_path },
-                CacheOption::BySize,
-            )
-            .finish(),
+            Image::new(AssetSource::Bundled { path: svg_path }, CacheOption::BySize).finish(),
         );
     }
 

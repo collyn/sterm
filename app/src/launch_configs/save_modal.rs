@@ -527,10 +527,7 @@ impl LaunchConfigSaveModal {
                     .ui_builder()
                     .link(
                         crate::t!("launch-config-link-to-documentation"),
-                        Some(
-                            ""
-                                .to_string(),
-                        ),
+                        Some("".to_string()),
                         None,
                         self.mouse_states.documentation_link_state.clone(),
                     )

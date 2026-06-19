@@ -5,6 +5,14 @@
 //!
 //! Phase 3 起加 "连接" 按钮 → emit OpenSshTerminal → SecretInjector。
 
+use crate::editor::{
+    EditorView, Event as EditorEvent, SingleLineEditorOptions, TextColors, TextOptions,
+};
+use crate::pane_group::focus_state::PaneFocusHandle;
+use crate::pane_group::pane::view;
+use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
+use crate::ssh_manager::{SshTreeChangedEvent, SshTreeChangedNotifier};
+use crate::view_components::dropdown::{Dropdown, DropdownItem};
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::color::internal_colors;
 use warpui::elements::{
@@ -20,14 +28,6 @@ use warpui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
-use crate::view_components::dropdown::{Dropdown, DropdownItem};
-use crate::editor::{
-    EditorView, Event as EditorEvent, SingleLineEditorOptions, TextColors, TextOptions,
-};
-use crate::pane_group::focus_state::PaneFocusHandle;
-use crate::pane_group::pane::view;
-use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
-use crate::ssh_manager::{SshTreeChangedEvent, SshTreeChangedNotifier};
 
 use warp_ssh_manager::{
     AuthType, ConnectionStatus, KeychainSecretStore, NodeKind, SecretKind, SshNode, SshRepository,
@@ -313,15 +313,14 @@ impl SshServerView {
                 .get(&srv.node_id, SecretKind::Password)
                 .unwrap_or(None)
                 .is_some();
-            self.password_editor
-                .update(ctx, |e, ctx| {
-                    e.set_buffer_text("", ctx);
-                    if pw_saved {
-                        e.set_placeholder_text("●●●●●●●", ctx);
-                    } else {
-                        e.set_placeholder_text("•••••••", ctx);
-                    }
-                });
+            self.password_editor.update(ctx, |e, ctx| {
+                e.set_buffer_text("", ctx);
+                if pw_saved {
+                    e.set_placeholder_text("●●●●●●●", ctx);
+                } else {
+                    e.set_placeholder_text("•••••••", ctx);
+                }
+            });
             let startup_command = srv.startup_command.clone().unwrap_or_default();
             self.startup_command_editor
                 .update(ctx, |e, ctx| e.set_buffer_text(&startup_command, ctx));
@@ -333,18 +332,17 @@ impl SshServerView {
                 .get(&srv.node_id, SecretKind::RootPassword)
                 .unwrap_or(None)
                 .is_some();
-            self.root_password_editor
-                .update(ctx, |e, ctx| {
-                    e.set_buffer_text("", ctx);
-                    if root_pw_saved {
-                        e.set_placeholder_text("●●●●●●●", ctx);
-                    } else {
-                        e.set_placeholder_text(
-                            &crate::t!("workspace-left-panel-ssh-manager-root-password-placeholder"),
-                            ctx,
-                        );
-                    }
-                });
+            self.root_password_editor.update(ctx, |e, ctx| {
+                e.set_buffer_text("", ctx);
+                if root_pw_saved {
+                    e.set_placeholder_text("●●●●●●●", ctx);
+                } else {
+                    e.set_placeholder_text(
+                        &crate::t!("workspace-left-panel-ssh-manager-root-password-placeholder"),
+                        ctx,
+                    );
+                }
+            });
         }
 
         // `set_buffer_text` 默认让所有 editor 处于"全选"状态(buffer 替换 +
@@ -371,8 +369,10 @@ impl SshServerView {
     /// 根据 self.folders 重建下拉列表并设置当前选中项。
     fn rebuild_group_dropdown(&mut self, ctx: &mut ViewContext<Self>) {
         let root_label = crate::t!("workspace-left-panel-ssh-manager-group-root");
-        let mut items: Vec<DropdownItem<SshServerAction>> =
-            vec![DropdownItem::new(root_label, SshServerAction::SelectGroup(None))];
+        let mut items: Vec<DropdownItem<SshServerAction>> = vec![DropdownItem::new(
+            root_label,
+            SshServerAction::SelectGroup(None),
+        )];
         for (i, (_, name)) in self.folders.iter().enumerate() {
             items.push(DropdownItem::new(
                 name.clone(),
@@ -542,8 +542,7 @@ impl SshServerView {
         let port_str = self.current_text(&self.port_editor.clone(), ctx);
         let user = self.current_text(&self.user_editor.clone(), ctx);
         let key_path_text = self.current_text(&self.key_path_editor.clone(), ctx);
-        let startup_command_text = self
-            .current_text(&self.startup_command_editor.clone(), ctx);
+        let startup_command_text = self.current_text(&self.startup_command_editor.clone(), ctx);
         let notes_text = self.current_text(&self.notes_editor.clone(), ctx);
 
         let port: u16 = port_str.trim().parse().unwrap_or(22);
@@ -609,7 +608,11 @@ impl SshServerView {
             port,
             username: user.trim().to_string(),
             auth_type: self.auth_type,
-            key_path: if key_path.is_empty() { None } else { Some(key_path) },
+            key_path: if key_path.is_empty() {
+                None
+            } else {
+                Some(key_path)
+            },
             startup_command: None,
             notes: None,
             last_connected_at: None,
@@ -627,7 +630,8 @@ impl SshServerView {
         let node_id = self.node_id.clone();
         ctx.spawn(
             async move {
-                let result = warp_ssh_manager::ssh_command::test_connection(&server, password).await;
+                let result =
+                    warp_ssh_manager::ssh_command::test_connection(&server, password).await;
                 (node_id, result)
             },
             |me, (_node_id, result), ctx| {
@@ -636,7 +640,8 @@ impl SshServerView {
                 me.latency_ms = result.latency_ms;
                 match result.status {
                     ConnectionStatus::Online => {
-                        let latency_str = result.latency_ms
+                        let latency_str = result
+                            .latency_ms
                             .map(|ms| format!("{ms}ms"))
                             .unwrap_or_else(|| "N/A".into());
                         let msg = result.error_message.unwrap_or_default();
@@ -652,7 +657,9 @@ impl SshServerView {
                     }
                     ConnectionStatus::Offline => {
                         me.latency_ms = None;
-                        let err = result.error_message.unwrap_or_else(|| "Unknown error".into());
+                        let err = result
+                            .error_message
+                            .unwrap_or_else(|| "Unknown error".into());
                         me.status = Some(StatusBanner::Error(err));
                     }
                     ConnectionStatus::Unknown => {
@@ -967,13 +974,17 @@ impl SshServerView {
         let bg = theme.background();
         let (icon, color, text) = match self.connection_status {
             ConnectionStatus::Online => {
-                let latency_str = self.latency_ms
+                let latency_str = self
+                    .latency_ms
                     .map(|ms| format!(" ({ms}ms)"))
                     .unwrap_or_default();
                 (
                     "●",
                     theme.ui_green_color().into(),
-                    format!("{}{latency_str}", crate::t!("workspace-left-panel-ssh-manager-status-online")),
+                    format!(
+                        "{}{latency_str}",
+                        crate::t!("workspace-left-panel-ssh-manager-status-online")
+                    ),
                 )
             }
             ConnectionStatus::Offline => (
@@ -1092,7 +1103,8 @@ impl TypedActionView for SshServerView {
             SshServerAction::SetAuthKey => self.on_set_auth(AuthType::Key, ctx),
             SshServerAction::PickKeyFile => self.on_pick_key_file(ctx),
             SshServerAction::SelectGroup(index) => {
-                let new_group_id = index.and_then(|i| self.folders.get(i).map(|(id, _)| id.clone()));
+                let new_group_id =
+                    index.and_then(|i| self.folders.get(i).map(|(id, _)| id.clone()));
                 if new_group_id != self.current_group_id {
                     self.current_group_id = new_group_id;
                     ctx.notify();
@@ -1174,7 +1186,11 @@ impl View for SshServerView {
         let mut col = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
         col.add_child(Container::new(header).with_margin_bottom(8.0).finish());
 
-        col.add_child(Container::new(self.render_connection_status(appearance)).with_margin_bottom(8.0).finish());
+        col.add_child(
+            Container::new(self.render_connection_status(appearance))
+                .with_margin_bottom(8.0)
+                .finish(),
+        );
 
         if let Some(banner) = self.render_status_banner(appearance) {
             col.add_child(banner);

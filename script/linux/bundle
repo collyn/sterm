@@ -265,7 +265,7 @@ fi
 # `<triple>-{gcc,g++}` 符号链接。CI 的静态 musl CLI build 走这条路。
 # 本地不设置该变量时维持原有 `cargo build` 行为(host glibc 路径不受影响)。
 if [[ "$BUILD" == "true" ]]; then
-  echo "Building and bundling Zap for channel $RELEASE_CHANNEL and bundle id $BUNDLE_ID"
+  echo "Building and bundling Sterm for channel $RELEASE_CHANNEL and bundle id $BUNDLE_ID"
   if [[ "${USE_ZIGBUILD:-false}" == "true" ]]; then
     echo "Using cargo zigbuild (zig-backed cross toolchain)"
     cargo zigbuild -p warp --profile "$CARGO_PROFILE" --bin "$WARP_BIN" --features "$FEATURES" "${CARGO_TARGET_ARG[@]}"

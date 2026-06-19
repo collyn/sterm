@@ -3467,9 +3467,7 @@ impl SettingsWidget for WindowBlurWidget {
         let blur_value = *window_settings.background_blur_radius;
         let label_info = AdditionalInfo {
             mouse_state: self.info_button.clone(),
-            on_click_action: Some(AppearancePageAction::OpenUrl(
-                "".into(),
-            )),
+            on_click_action: Some(AppearancePageAction::OpenUrl("".into())),
             secondary_text: None,
             tooltip_override_text: None,
         };
@@ -5478,9 +5476,7 @@ impl SettingsWidget for AltScreenPaddingWidget {
             crate::t!("settings-appearance-alt-screen-padding-label"),
             Some(AdditionalInfo {
                 mouse_state: self.additional_info_mouse_state.clone(),
-                on_click_action: Some(AppearancePageAction::OpenUrl(
-                    "".into(),
-                )),
+                on_click_action: Some(AppearancePageAction::OpenUrl("".into())),
                 secondary_text: None,
                 tooltip_override_text: None,
             }),

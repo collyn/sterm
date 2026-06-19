@@ -1,7 +1,6 @@
 /// resolve_test_password 单元测试
 /// author: logic
 /// date: 2026/06/01
-
 use super::*;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -71,11 +70,7 @@ impl SshSecretStore for MockSecretStore {
             .map(Zeroizing::new))
     }
 
-    fn delete(
-        &self,
-        _node_id: &str,
-        _kind: SecretKind,
-    ) -> Result<(), SshSecretStoreError> {
+    fn delete(&self, _node_id: &str, _kind: SecretKind) -> Result<(), SshSecretStoreError> {
         unimplemented!()
     }
 }

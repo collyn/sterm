@@ -45,14 +45,14 @@ use crate::workspace::view::conversation_list::view::{
 use crate::workspace::view::global_search::view::{
     Event as GlobalSearchViewEvent, GlobalSearchEntryFocus, GlobalSearchView,
 };
-use crate::workspace::view::server_file_browser::{
-    ServerFileBrowserEvent, ServerFileBrowserView,
-};
+use crate::workspace::view::pixel_agents_panel::PixelAgentsPanelView;
+use crate::workspace::view::server_file_browser::{ServerFileBrowserEvent, ServerFileBrowserView};
 use crate::workspace::view::{
     LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME, LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME,
-    LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME, LEFT_PANEL_SKILL_MANAGER_BINDING_NAME,
-    LEFT_PANEL_SSH_MANAGER_BINDING_NAME, LEFT_PANEL_WARP_DRIVE_BINDING_NAME,
-    OPEN_GLOBAL_SEARCH_BINDING_NAME, TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME,
+    LEFT_PANEL_PIXEL_AGENTS_BINDING_NAME, LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME,
+    LEFT_PANEL_SKILL_MANAGER_BINDING_NAME, LEFT_PANEL_SSH_MANAGER_BINDING_NAME,
+    LEFT_PANEL_WARP_DRIVE_BINDING_NAME, OPEN_GLOBAL_SEARCH_BINDING_NAME,
+    TOGGLE_CONVERSATION_LIST_VIEW_BINDING_NAME, TOGGLE_PIXEL_AGENTS_PANEL_BINDING_NAME,
     TOGGLE_PROJECT_EXPLORER_BINDING_NAME, TOGGLE_WARP_DRIVE_BINDING_NAME,
 };
 use crate::{
@@ -77,6 +77,7 @@ struct MouseStateHandles {
     global_search_button: MouseStateHandle,
     warp_drive_button: MouseStateHandle,
     conversation_list_view_button: MouseStateHandle,
+    pixel_agents_button: MouseStateHandle,
     ssh_manager_button: MouseStateHandle,
     server_file_browser_button: MouseStateHandle,
     skill_manager_button: MouseStateHandle,
@@ -88,6 +89,7 @@ pub enum LeftPanelAction {
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
     ZapDrive,
     ConversationListView,
+    PixelAgents,
     SshManager,
     ServerFileBrowser,
     SkillManager,
@@ -142,6 +144,7 @@ pub enum ToolPanelView {
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
     ZapDrive,
     ConversationListView,
+    PixelAgents,
     SshManager,
     ServerFileBrowser,
     SkillManager,
@@ -211,6 +214,7 @@ pub struct LeftPanelView {
     close_button_mouse_state: MouseStateHandle,
     warp_drive_view: ViewHandle<DrivePanel>,
     conversation_list_view: ViewHandle<ConversationListView>,
+    pixel_agents_panel_view: ViewHandle<PixelAgentsPanelView>,
     ssh_manager_view: ViewHandle<SshManagerPanel>,
     server_file_browser_view: ViewHandle<ServerFileBrowserView>,
     skill_manager_view: ViewHandle<SkillManagerPanel>,
@@ -258,6 +262,7 @@ impl LeftPanelView {
         };
         let warp_drive_view = ctx.add_typed_action_view(DrivePanel::new);
         let conversation_list_view = ctx.add_typed_action_view(ConversationListView::new);
+        let pixel_agents_panel_view = ctx.add_view(PixelAgentsPanelView::new);
         let ssh_manager_view = ctx.add_typed_action_view(SshManagerPanel::new);
         let server_file_browser_view = ctx.add_typed_action_view(ServerFileBrowserView::new);
         let skill_manager_view = ctx.add_typed_action_view(SkillManagerPanel::new);
@@ -398,6 +403,7 @@ impl LeftPanelView {
             close_button_mouse_state: Default::default(),
             warp_drive_view,
             conversation_list_view,
+            pixel_agents_panel_view,
             ssh_manager_view,
             server_file_browser_view,
             skill_manager_view,
@@ -440,6 +446,7 @@ impl LeftPanelView {
             // Use discriminant comparison for GlobalSearch since it has inner data
             match (v, &current_view) {
                 (ToolPanelView::GlobalSearch { .. }, ToolPanelView::GlobalSearch { .. }) => true,
+                (ToolPanelView::PixelAgents, ToolPanelView::PixelAgents) => true,
                 (ToolPanelView::SshManager, ToolPanelView::SshManager) => true,
                 (ToolPanelView::ServerFileBrowser, ToolPanelView::ServerFileBrowser) => true,
                 (ToolPanelView::SkillManager, ToolPanelView::SkillManager) => true,
@@ -531,6 +538,21 @@ impl LeftPanelView {
                     active_icon: Some(Icon::Conversation),
                     tooltip_text: crate::t!("workspace-left-panel-agent-conversations"),
                     action: LeftPanelAction::ConversationListView,
+                    render_with_active_state: false,
+                    tooltip_keybinding: toolbelt_tooltip_keybinding(&tooltip_keybinding_names, ctx),
+                    tooltip_keybinding_names,
+                }
+            }
+            ToolPanelView::PixelAgents => {
+                let tooltip_keybinding_names = vec![
+                    LEFT_PANEL_PIXEL_AGENTS_BINDING_NAME,
+                    TOGGLE_PIXEL_AGENTS_PANEL_BINDING_NAME,
+                ];
+                ToolbeltButtonConfig {
+                    icon: Icon::LoadingAgents0,
+                    active_icon: Some(Icon::LoadingAgents3),
+                    tooltip_text: "Pixel Agents".to_owned(),
+                    action: LeftPanelAction::PixelAgents,
                     render_with_active_state: false,
                     tooltip_keybinding: toolbelt_tooltip_keybinding(&tooltip_keybinding_names, ctx),
                     tooltip_keybinding_names,
@@ -761,6 +783,19 @@ impl LeftPanelView {
             .collect();
         let directories = deduplicate_by_directory_name(directories);
         let active_file_model = pane_group.as_ref(ctx).active_file_model().clone();
+        let visible_terminal_ids: Vec<_> = pane_group
+            .as_ref(ctx)
+            .terminal_pane_ids()
+            .filter_map(|pane_id| {
+                pane_group
+                    .as_ref(ctx)
+                    .terminal_view_from_pane_id(pane_id, ctx)
+                    .map(|terminal_view| terminal_view.id())
+            })
+            .collect();
+        self.pixel_agents_panel_view.update(ctx, |view, ctx| {
+            view.set_visible_terminal_ids(visible_terminal_ids, ctx);
+        });
 
         let file_tree_view = self.get_or_create_file_tree_view_for_pane_group(pane_group_id, ctx);
         let left_panel_open = pane_group.as_ref(ctx).left_panel_open;
@@ -837,6 +872,9 @@ impl LeftPanelView {
                 self.conversation_list_view.update(ctx, |view, ctx| {
                     view.on_left_panel_focused(ctx);
                 });
+            }
+            ToolPanelView::PixelAgents => {
+                ctx.focus(&self.pixel_agents_panel_view);
             }
             ToolPanelView::SshManager => {
                 ctx.focus(&self.ssh_manager_view);
@@ -1010,6 +1048,9 @@ impl LeftPanelView {
                 LeftPanelAction::ConversationListView => {
                     self.active_view.get() == ToolPanelView::ConversationListView
                 }
+                LeftPanelAction::PixelAgents => {
+                    self.active_view.get() == ToolPanelView::PixelAgents
+                }
                 LeftPanelAction::SshManager => self.active_view.get() == ToolPanelView::SshManager,
                 LeftPanelAction::ServerFileBrowser => {
                     self.active_view.get() == ToolPanelView::ServerFileBrowser
@@ -1158,6 +1199,9 @@ impl LeftPanelView {
                 active_view_state::set(self, ToolPanelView::ConversationListView, ctx);
                 send_telemetry_from_ctx!(TelemetryEvent::ConversationListViewOpened, ctx);
             }
+            LeftPanelAction::PixelAgents => {
+                active_view_state::set(self, ToolPanelView::PixelAgents, ctx);
+            }
             LeftPanelAction::SshManager => {
                 active_view_state::set(self, ToolPanelView::SshManager, ctx);
             }
@@ -1266,6 +1310,7 @@ impl View for LeftPanelView {
                 }
                 ToolPanelView::ZapDrive => ctx.focus(&self.warp_drive_view),
                 ToolPanelView::ConversationListView => ctx.focus(&self.conversation_list_view),
+                ToolPanelView::PixelAgents => ctx.focus(&self.pixel_agents_panel_view),
                 ToolPanelView::SshManager => ctx.focus(&self.ssh_manager_view),
                 ToolPanelView::ServerFileBrowser => ctx.focus(&self.server_file_browser_view),
                 ToolPanelView::SkillManager => ctx.focus(&self.skill_manager_view),
@@ -1283,6 +1328,7 @@ impl View for LeftPanelView {
             self.mouse_state_handles
                 .conversation_list_view_button
                 .clone(),
+            self.mouse_state_handles.pixel_agents_button.clone(),
             self.mouse_state_handles.ssh_manager_button.clone(),
             self.mouse_state_handles.server_file_browser_button.clone(),
             self.mouse_state_handles.skill_manager_button.clone(),
@@ -1343,6 +1389,10 @@ impl View for LeftPanelView {
             .finish(),
             ToolPanelView::ConversationListView => {
                 Shrinkable::new(1.0, ChildView::new(&self.conversation_list_view).finish()).finish()
+            }
+            ToolPanelView::PixelAgents => {
+                Shrinkable::new(1.0, ChildView::new(&self.pixel_agents_panel_view).finish())
+                    .finish()
             }
             ToolPanelView::SshManager => Shrinkable::new(
                 1.0,

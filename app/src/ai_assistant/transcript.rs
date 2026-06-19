@@ -49,7 +49,6 @@ const TERMINAL_INPUT_SVG_PATH: &str = "bundled/svg/terminal-input.svg";
 const USER_ICON_SVG_PATH: &str = "bundled/svg/user.svg";
 const SAVE_WORKFLOW_ICON_PATH: &str = "bundled/svg/workflow.svg";
 
-
 const PANEL_LEFT_MARGIN: f32 = 15.;
 const DETAILS_BOTTOM_MARGIN: f32 = 12.;
 

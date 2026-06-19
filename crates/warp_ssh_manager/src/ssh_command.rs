@@ -180,8 +180,7 @@ async fn test_password_auth_windows(
     cmd_args: Vec<String>,
     password: &Zeroizing<String>,
 ) -> Result<(), String> {
-    let askpass = AskpassSession::new(password)
-        .map_err(|e| format!("准备 askpass 失败: {e}"))?;
+    let askpass = AskpassSession::new(password).map_err(|e| format!("准备 askpass 失败: {e}"))?;
 
     let mut cmd = command::r#async::Command::new("ssh");
     cmd.args(&cmd_args)

@@ -220,8 +220,7 @@ fn resolve_tab_config_shell(name: &str, ctx: &AppContext) -> Option<AvailableShe
 
     AvailableShell::try_from(name).ok()
 }
-const WARP_SHELL_COMPATIBILITY_DOCS: &str =
-    "";
+const WARP_SHELL_COMPATIBILITY_DOCS: &str = "";
 // Default minimum width for a newly created Agent Mode pane so that it is legible. Called "default"
 // because this value may be too large for small windows. In that case, we fall back to 50% of the
 // window width.
@@ -2807,7 +2806,13 @@ impl PaneGroup {
         ctx: &mut ViewContext<Self>,
     ) {
         if !crate::settings::AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
-            let (new_pane, _) = self.create_terminal_pane_data(None, std::collections::HashMap::new(), None, None, ctx);
+            let (new_pane, _) = self.create_terminal_pane_data(
+                None,
+                std::collections::HashMap::new(),
+                None,
+                None,
+                ctx,
+            );
             self.replace_pane(pane_id, new_pane, false, ctx);
             return;
         }
@@ -4720,6 +4725,7 @@ impl PaneGroup {
         // Clear hidden closed panes since resizing invalidates undo functionality
         self.clear_hidden_closed_panes(ctx);
         self.dragged_border = Some(info);
+        ctx.notify();
     }
 
     pub fn end_resizing(&mut self, ctx: &mut ViewContext<Self>) {
@@ -6220,17 +6226,26 @@ impl View for PaneGroup {
             column.add_child(ChildView::new(&self.user_default_shell_changed_banner).finish());
         }
 
+        let is_being_resized = self.is_being_resized();
         let main_content = if self.is_focused_pane_maximized(app) {
             self.focused_pane_id(app).render(app)
         } else {
             EventHandler::new(self.panes.render(appearance.theme(), app))
                 .on_mouse_dragged(move |ctx, _, position| {
-                    ctx.dispatch_typed_action(PaneGroupAction::ResizeMove(position));
-                    DispatchEventResult::StopPropagation
+                    if is_being_resized {
+                        ctx.dispatch_typed_action(PaneGroupAction::ResizeMove(position));
+                        DispatchEventResult::StopPropagation
+                    } else {
+                        DispatchEventResult::PropagateToParent
+                    }
                 })
                 .on_left_mouse_up(move |ctx, _, _| {
-                    ctx.dispatch_typed_action(PaneGroupAction::EndResizing);
-                    DispatchEventResult::StopPropagation
+                    if is_being_resized {
+                        ctx.dispatch_typed_action(PaneGroupAction::EndResizing);
+                        DispatchEventResult::StopPropagation
+                    } else {
+                        DispatchEventResult::PropagateToParent
+                    }
                 })
                 .finish()
         };

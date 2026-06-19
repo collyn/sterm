@@ -2,7 +2,7 @@
 
 pub fn get_file_icon(file_name: &str) -> Option<&'static str> {
     let lower_name = file_name.to_lowercase();
-    
+
     // 1. Match exact file name (e.g. "dockerfile", "package.json")
     match lower_name.as_str() {
         "._sc_" => return Some("bundled/svg/material/godot-assets.svg"),
@@ -1121,7 +1121,10 @@ pub fn get_file_icon(file_name: &str) -> Option<&'static str> {
 
     // 2. Match file extension (e.g. "rs", "ts")
     let parsed_path = std::path::Path::new(file_name);
-    let extension = parsed_path.extension().and_then(|ext| ext.to_str())?.to_lowercase();
+    let extension = parsed_path
+        .extension()
+        .and_then(|ext| ext.to_str())?
+        .to_lowercase();
     match extension.as_str() {
         ".ncurc.js" => Some("bundled/svg/material/dependencies-update.svg"),
         ".ncurc.json" => Some("bundled/svg/material/dependencies-update.svg"),

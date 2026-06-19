@@ -1,4 +1,4 @@
-use super::{PASSWORD_PROMPT_REGEX, SU_ROOT_CMD_REGEX, is_su_to_root};
+use super::{is_su_to_root, PASSWORD_PROMPT_REGEX, SU_ROOT_CMD_REGEX};
 
 fn pw_matches(input: &str) -> bool {
     PASSWORD_PROMPT_REGEX.is_match(input.as_bytes())
@@ -22,7 +22,9 @@ fn password_prompt_matches_typical_forms() {
     assert!(pw_matches("输入密码"));
     assert!(pw_matches("输入密码 "));
     // passphrase
-    assert!(pw_matches("Enter passphrase for key '/home/u/.ssh/id_rsa': "));
+    assert!(pw_matches(
+        "Enter passphrase for key '/home/u/.ssh/id_rsa': "
+    ));
 }
 
 #[test]
@@ -33,7 +35,9 @@ fn password_prompt_rejects_false_positives() {
     assert!(!pw_matches("password changed successfully"));
     assert!(!pw_matches("New password for root"));
     assert!(!pw_matches("Welcome! Please change your password soon.\n"));
-    assert!(!pw_matches("Last login: Mon Jan 1 password rotated yesterday\n"));
+    assert!(!pw_matches(
+        "Last login: Mon Jan 1 password rotated yesterday\n"
+    ));
     // 中文同理
     assert!(!pw_matches("您的密码已过期"));
 }

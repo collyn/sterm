@@ -663,7 +663,13 @@ mod tests {
             "websearch".into(),
             "mcp__github__create_issue".into(),
         ];
-        let out = render_system(&LLMId::from("byop:p:deepseek-chat"), &[], &tools, false, &[]);
+        let out = render_system(
+            &LLMId::from("byop:p:deepseek-chat"),
+            &[],
+            &tools,
+            false,
+            &[],
+        );
         for name in &tools {
             assert!(
                 out.contains(name),
@@ -748,7 +754,10 @@ mod tests {
             false,
             &rules,
         );
-        assert!(out.contains("# User rules"), "应渲染 user rules 区块: {out}");
+        assert!(
+            out.contains("# User rules"),
+            "应渲染 user rules 区块: {out}"
+        );
         assert!(out.contains("## My rule"), "应包含规则名: {out}");
         assert!(
             out.contains("Always use snake_case in Rust."),
@@ -890,9 +899,7 @@ mod tests {
         let pos_thinking = out
             .find("# Thinking language")
             .expect("应包含 thinking_language");
-        let pos_tools = out
-            .find("# Available Tools")
-            .expect("应包含 tool_aliases");
+        let pos_tools = out.find("# Available Tools").expect("应包含 tool_aliases");
         assert!(
             pos_thinking < pos_tools,
             "thinking_language 应在 tool_aliases 之前: thinking={pos_thinking}, tools={pos_tools}\n{out}"
