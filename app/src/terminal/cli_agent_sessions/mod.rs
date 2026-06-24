@@ -210,8 +210,8 @@ impl CLIAgentSession {
                 CLIAgentSessionStatus::InProgress
             }
             // IdlePrompt means the agent is sitting at its prompt waiting for input.
-            // This should not affect status — otherwise it would override Success after a Stop event.
-            CLIAgentEventType::IdlePrompt => return None,
+            // Map this to Success so the session transitions to Done when the agent is idle.
+            CLIAgentEventType::IdlePrompt => CLIAgentSessionStatus::Success,
             CLIAgentEventType::SessionStart => {
                 self.plugin_version = event.payload.plugin_version.clone();
                 return None;

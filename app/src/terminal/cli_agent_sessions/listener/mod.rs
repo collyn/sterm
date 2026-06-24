@@ -96,17 +96,16 @@ fn create_handler(agent: &CLIAgent) -> Option<Box<dyn CLIAgentSessionHandler>> {
     }
 }
 
-/// Default handler shared by agents whose events need no special filtering
-/// beyond skipping the initial `SessionStart`.
+/// Default handler shared by agents whose events need no special filtering.
 struct DefaultSessionListener;
 
 impl CLIAgentSessionHandler for DefaultSessionListener {
     fn handle_event(&mut self, event: CLIAgentEvent) -> Option<CLIAgentEvent> {
-        // Skip session_start events (handled during listener construction)
-        if event.event == CLIAgentEventType::SessionStart {
-            return None;
-        }
-
+        // Forward SessionStart so the model populates cwd, session_id, and
+        // project from the event — these are needed by the pixel agents panel
+        // to locate the correct transcript file for sub-agent detection.
+        // `apply_event` returns None (no status change) for SessionStart, so
+        // no spurious StatusChanged events are emitted.
         Some(event)
     }
 }
@@ -350,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn auggie_default_handler_skips_session_start() {
+    fn auggie_default_handler_forwards_session_start() {
         let mut handler = DefaultSessionListener;
         let event = CLIAgentEvent {
             v: 1,
@@ -361,7 +360,7 @@ mod tests {
             project: None,
             payload: CLIAgentEventPayload::default(),
         };
-        assert!(handler.handle_event(event).is_none());
+        assert!(handler.handle_event(event).is_some());
     }
 
     #[test]
@@ -390,7 +389,7 @@ mod tests {
     }
 
     #[test]
-    fn pi_default_handler_skips_session_start() {
+    fn pi_default_handler_forwards_session_start() {
         let mut handler = DefaultSessionListener;
         let event = CLIAgentEvent {
             v: 1,
@@ -401,7 +400,7 @@ mod tests {
             project: None,
             payload: CLIAgentEventPayload::default(),
         };
-        assert!(handler.handle_event(event).is_none());
+        assert!(handler.handle_event(event).is_some());
     }
 
     #[test]
@@ -430,7 +429,7 @@ mod tests {
     }
 
     #[test]
-    fn antigravity_default_handler_skips_session_start() {
+    fn antigravity_default_handler_forwards_session_start() {
         let mut handler = DefaultSessionListener;
         let event = CLIAgentEvent {
             v: 1,
@@ -441,7 +440,7 @@ mod tests {
             project: None,
             payload: CLIAgentEventPayload::default(),
         };
-        assert!(handler.handle_event(event).is_none());
+        assert!(handler.handle_event(event).is_some());
     }
 
     #[test]

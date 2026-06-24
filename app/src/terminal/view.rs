@@ -11016,9 +11016,7 @@ impl TerminalView {
         if !is_agent_supported(&notification.agent) {
             return;
         }
-        if !self.register_cli_agent_listener_from_event(&notification, ctx) {
-            return;
-        }
+        self.register_cli_agent_listener_from_event(&notification, ctx);
 
         CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions_model, ctx| {
             sessions_model.update_from_event(self.view_id, &notification, ctx);
