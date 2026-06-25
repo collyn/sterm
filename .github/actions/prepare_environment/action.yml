@@ -174,4 +174,27 @@ runs:
     - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
       if: ${{ inputs.target_os == 'macos' && inputs.is_self_hosted != 'true' }}
       with:
-        xcode-version: '26'
+        # Pin 26.0 explicitly.  '26' (latest) may resolve to a Release Candidate
+        # (e.g. 26.6 RC2) that ships without the Metal Toolchain, which breaks
+        # `xcrun metal` / `xcrun metallib` in warpui's build.rs.
+        xcode-version: '26.0'
+
+    # Safety net: if Metal Toolchain is still missing (e.g. runner image changed
+    # or a newer Xcode patch broke the default install), install it on-demand.
+    - name: Install Metal Toolchain (if missing)
+      if: ${{ inputs.target_os == 'macos' && inputs.is_self_hosted != 'true' }}
+      shell: bash
+      run: |
+        if xcrun -f metal &>/dev/null; then
+          echo "Metal Toolchain available at $(xcrun -f metal)"
+        else
+          echo "::warning::Metal Toolchain missing, attempting fallback..."
+          # `xcodebuild -downloadComponent` requires Apple ID auth in most
+          # environments; the primary purpose here is to surface a clear error
+          # rather than the cryptic "cannot execute tool 'metal'" panic.
+          sudo xcodebuild -downloadComponent MetalToolchain 2>/dev/null || true
+          if ! xcrun -f metal &>/dev/null; then
+            echo "::error::Metal Toolchain unavailable — try pinning a different Xcode version"
+            exit 1
+          fi
+        fi
