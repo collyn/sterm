@@ -1,7 +1,20 @@
 #ifndef shader_types_h
 #define shader_types_h
 
-#include <simd/simd.h>
+// Forward-declare the SIMD vector types we need instead of including
+// <simd/simd.h>.  The system header transitively pulls in clang intrinsic
+// headers (avx512fp16intrin.h, amxavx512intrin.h, avx10_2*intrin.h, …)
+// that define _Float16 / __bf16 types which bindgen cannot process.  Each
+// Xcode release adds more of these headers, so suppressing them one by one
+// with -D flags in build.rs is a maintenance burden.
+//
+// Metal Shading Language compilers treat vector_float{2,4} as built-in
+// types — the forward declarations are only consumed by bindgen (C/C++
+// parser), so Metal compilation is unaffected.
+#ifndef __METAL_VERSION__
+typedef float vector_float2 __attribute__((__ext_vector_type__(2)));
+typedef float vector_float4 __attribute__((__ext_vector_type__(4)));
+#endif
 
 typedef struct {
   vector_float2 viewport_size;
